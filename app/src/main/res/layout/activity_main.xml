@@ -22,10 +22,11 @@
         android:layout_marginBottom="16dp" />
 
     <TextView
+        android:id="@+id/tvCameraLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/label_camera"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="24dp"/>
 
     <RadioGroup
         android:id="@+id/rgCamera"
@@ -34,17 +35,16 @@
         android:orientation="horizontal">
 
         <RadioButton
-            android:id="@+id/rbFront"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/camera_front"
-            android:checked="true" />
-
-        <RadioButton
             android:id="@+id/rbBack"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/camera_back"
-            android:layout_marginStart="16dp" />
+            android:text="@string/camera_back" />
+
+        <RadioButton
+            android:id="@+id/rbFront"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/camera_front" />
+
     </RadioGroup>
 </LinearLayout>
