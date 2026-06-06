@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -17,6 +18,11 @@ import androidx.lifecycle.lifecycleScope
 import com.gesturecontrol.R
 import com.gesturecontrol.camera.CameraPreferenceRepository
 import com.gesturecontrol.camera.LensFacing
+import com.gesturecontrol.camera.MPImageConverter
+import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizer
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
@@ -27,15 +33,18 @@ class GestureRecognitionService : LifecycleService() {
         private const val TAG = "GestureRecognitionSvc"
         private const val CHANNEL_ID = "gesture_control_channel"
         private const val NOTIFICATION_ID = 1
+        private const val MODEL_ASSET = "gesture_recognizer.task"
     }
 
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private lateinit var cameraPrefs: CameraPreferenceRepository
+    private var gestureRecognizer: GestureRecognizer? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         startForeground(NOTIFICATION_ID, buildNotification())
         cameraPrefs = CameraPreferenceRepository(applicationContext)
+        initMediaPipe()
         lifecycleScope.launch { startCamera() }
         return START_STICKY
     }
@@ -43,10 +52,35 @@ class GestureRecognitionService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         stopForeground(STOP_FOREGROUND_REMOVE)
+        gestureRecognizer?.close()
         analysisExecutor.shutdown()
     }
 
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
+
+    private fun initMediaPipe() {
+        val baseOptions = BaseOptions.builder()
+            .setModelAssetPath(MODEL_ASSET)
+            .build()
+
+        val options = GestureRecognizer.GestureRecognizerOptions.builder()
+            .setBaseOptions(baseOptions)
+            .setRunningMode(RunningMode.LIVE_STREAM)
+            .setResultListener { result, _ -> onGestureResult(result) }
+            .setErrorListener { error -> Log.e(TAG, "MediaPipe error", error) }
+            .build()
+
+        gestureRecognizer = GestureRecognizer.createFromOptions(this, options)
+        Log.d(TAG, "MediaPipe GestureRecognizer initialized")
+    }
+
+    private fun onGestureResult(result: GestureRecognizerResult) {
+        val gestures = result.gestures()
+        if (gestures.isNotEmpty() && gestures[0].isNotEmpty()) {
+            val top = gestures[0][0]
+            Log.d(TAG, "Gesture: ${top.categoryName()} score=${top.score()}")
+        }
+    }
 
     private suspend fun startCamera() {
         val lensFacing = cameraPrefs.lensFacing.first()
@@ -79,8 +113,20 @@ class GestureRecognitionService : LifecycleService() {
     }
 
     private fun onFrameReceived(imageProxy: ImageProxy) {
-        // TODO Task 9: pass to MediaPipe GestureRecognizer
-        imageProxy.close()
+        val recognizer = gestureRecognizer
+        if (recognizer == null) {
+            imageProxy.close()
+            return
+        }
+
+        try {
+            val mpImage = MPImageConverter.fromImageProxy(imageProxy)
+            recognizer.recognizeAsync(mpImage, SystemClock.uptimeMillis())
+        } catch (e: Exception) {
+            Log.e(TAG, "Frame processing error", e)
+        } finally {
+            imageProxy.close()
+        }
     }
 
     private fun buildNotification(): Notification {
