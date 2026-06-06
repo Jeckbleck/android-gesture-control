@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gesture Control</string>
+    <string name="status_inactive">Gesture Control: Inactive</string>
+    <string name="status_active">Gesture Control: Active</string>
+    <string name="btn_enable_accessibility">Enable Accessibility Service</string>
+    <string name="label_camera">Camera</string>
+    <string name="camera_front">Front</string>
+    <string name="camera_back">Back</string>
+    <string name="accessibility_service_description">Controls your device with hand gestures using the camera.</string>
+    <string name="notification_channel_name">Gesture Control</string>
+    <string name="notification_title">Gesture Control Active</string>
+    <string name="notification_text">Tap to open settings</string>
+    <string name="tile_label">Gesture Control</string>
+</resources>
